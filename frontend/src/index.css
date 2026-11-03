@@ -1,14 +1,34 @@
+:root {
+  --bg: #f1f1ec;
+  --ink: #2b2c28;
+  --muted: #7c8079;
+  --line: #d9dad2;
+  --sage: #a8b1a7;
+  --cream: #f4f2ea;
+  --forest: #2a362d;
+  --forest-2: #3a4a3e;
+  --wood: #d8c29d;
+  --tab: #8b9088;
+  --error: #a3443a;
+  --warn: #8a6a2c;
+  --font: "Jost", "Futura", "Century Gothic", system-ui, sans-serif;
+}
+
 * {
   box-sizing: border-box;
 }
+
 body {
   margin: 0;
-  background: #f4f6fb;
-  color: #1f2937;
-  font-family:
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
 }

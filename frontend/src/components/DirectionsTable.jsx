@@ -9,15 +9,15 @@ export default function DirectionsTable({ maneuvers, metric }) {
           <tr>
             <th>#</th>
             <th>Directions</th>
-            <th>Distance</th>
+            <th className="num">Distance</th>
           </tr>
         </thead>
         <tbody>
           {maneuvers.map((m, i) => (
             <tr key={i}>
-              <td>{i + 1}</td>
+              <td className="step">{String(i + 1).padStart(2, "0")}</td>
               <td>{m.narrative}</td>
-              <td className="nowrap">
+              <td className="nowrap num">
                 {formatDistance(m.distance_miles, metric)}
               </td>
             </tr>

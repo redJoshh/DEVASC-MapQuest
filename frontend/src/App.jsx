@@ -32,34 +32,61 @@ export default function App() {
   }
 
   return (
-    <main className="container">
-      <h1>MapQuest Directions</h1>
+    <div className="page">
+      <section className="hero">
+        <header className="masthead">
+          <h1 className="wordmark">ROUTE</h1>
+          <p className="byline">by: Atienza, Cabillo, Mortiz, Naguimbing</p>
+        </header>
 
-      <RouteForm
-        loading={loading}
-        onSearch={handleSearch}
-        onClear={handleClear}
-      />
+        <p className="tagline">
+          Find the way from where you are
+          <br />
+          to wherever you&rsquo;re headed.
+        </p>
 
-      {alert && (
-        <div className={`alert ${alert.level}`} role="alert">
-          {alert.text}
+        <div className="hero-panel">
+          <RouteForm
+            loading={loading}
+            onSearch={handleSearch}
+            onClear={handleClear}
+          />
         </div>
-      )}
 
-      {route && (
-        <section className="results">
-          <div className="success">Route Found</div>
-          <div className="results-header">
-            <h2>
-              {route.origin} &rarr; {route.destination}
-            </h2>
+        <aside className="hero-tab">
+          <span className="tab-icon" aria-hidden="true">
+            &#8597;
+          </span>
+          <div>
+            <span className="tab-title">Units</span>
             <UnitToggle metric={metric} onChange={setMetric} />
           </div>
-          <TripSummary route={route} metric={metric} />
-          <DirectionsTable maneuvers={route.maneuvers} metric={metric} />
+        </aside>
+      </section>
+
+      {(alert || route) && (
+        <section className="results">
+          {alert && (
+            <div className={`alert ${alert.level}`} role="alert">
+              {alert.text}
+            </div>
+          )}
+
+          {route && (
+            <>
+              <div className="results-header">
+                <span className="eyebrow success">Route found</span>
+                <h2>
+                  {route.origin} <span className="arrow">&rarr;</span>{" "}
+                  {route.destination}
+                </h2>
+              </div>
+              <TripSummary route={route} metric={metric} />
+              <DirectionsTable maneuvers={route.maneuvers} metric={metric} />
+            </>
+          )}
         </section>
       )}
-    </main>
+    </div>
   );
 }
