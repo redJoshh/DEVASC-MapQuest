@@ -84,7 +84,7 @@ els.swapBtn.addEventListener("click", () => {
 });
 
 // Clear resets the form, any error marks, the alert and the results.
-// The units choice is kept, as it was in the React version.
+// The units choice is kept on purpose: it's a user preference, not search data.
 els.clearBtn.addEventListener("click", () => {
   els.orig.value = "";
   els.dest.value = "";
