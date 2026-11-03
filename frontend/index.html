@@ -1,13 +1,215 @@
 <!doctype html>
+<!--
+  MapQuest Directions: the only HTML page.
+
+  How this page works:
+  - Flask (backend/app.py) serves this file at "/" and the JS files at /js/*.
+    The page and the API share one origin, so fetch("/api/route") needs no proxy.
+  - Everything is in the markup from the start. Sections that should not be
+    visible yet use the `hidden` attribute, and js/ui.js only shows/hides them
+    and fills in text. Keeping the structure here, not in JS, makes the layout
+    easy to read and edit in one place.
+  - Styling is Tailwind utility classes. Visual states are driven by attributes
+    the JS sets, not by classes the JS adds:
+      aria-invalid="true"   -> red input       (aria-invalid:...)
+      aria-pressed="true"   -> active toggle   (aria-pressed:...)
+      data-level="warning"  -> yellow alert    (data-[level=warning]:...)
+    The same attribute is both the style hook and the screen-reader state, so
+    the two can never disagree, and every class lives in this file.
+-->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <title>MapQuest Directions</title>
+
+    <!--
+      Tailwind v4 browser build: it reads the classes on the page and generates
+      the CSS in the browser, so there is no npm or build step.
+      The version is pinned so a new Tailwind release can't change the look
+      without us knowing. Trade-off: needs internet, and generating CSS at
+      runtime is slower than a prebuilt file (see README backlog: Tailwind CLI).
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3"></script>
+
+    <!--
+      Project colors as Tailwind theme tokens. Defining the primary blue once
+      gives classes like bg-primary / text-primary / border-primary, so changing
+      the brand color is a one-line edit.
+    -->
+    <style type="text/tailwindcss">
+      @theme {
+        --color-primary: #1d4ed8;
+        --color-page: #f4f6fb;
+        --color-ink: #1f2937;
+      }
+    </style>
   </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+
+  <body class="m-0 bg-page font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif] text-ink">
+    <main class="mx-auto my-8 max-w-[760px] px-4">
+      <h1 class="my-5 text-center text-3xl font-bold text-primary">MapQuest Directions</h1>
+
+      <!--
+        Search form. novalidate turns off the browser's own popups so our
+        validation (Test Case 3) shows the same message in every browser.
+        Pressing Enter in either input submits the form.
+      -->
+      <form
+        id="route-form"
+        novalidate
+        class="flex flex-col gap-2.5 rounded-[10px] bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.1)]"
+      >
+        <input
+          id="orig"
+          type="text"
+          aria-label="Starting location"
+          aria-describedby="field-error"
+          placeholder="Starting location (e.g. Washington, D.C.)"
+          class="rounded-md border-2 border-gray-300 p-3 text-base aria-invalid:border-[#d32f2f] aria-invalid:bg-[#fdecea]"
+        />
+
+        <button
+          id="swap-btn"
+          type="button"
+          title="Swap locations"
+          class="cursor-pointer self-center rounded-md bg-gray-200 px-3 py-1 text-base text-gray-900"
+        >
+          &#8645; Swap
+        </button>
+
+        <input
+          id="dest"
+          type="text"
+          aria-label="Destination"
+          aria-describedby="field-error"
+          placeholder="Destination (e.g. Baltimore, Md)"
+          class="rounded-md border-2 border-gray-300 p-3 text-base aria-invalid:border-[#d32f2f] aria-invalid:bg-[#fdecea]"
+        />
+
+        <!-- Shown only when a field is empty on submit. -->
+        <p id="field-error" hidden class="m-0 text-sm text-[#d32f2f]">
+          Please fill in both locations.
+        </p>
+
+        <div class="flex gap-2.5">
+          <!-- JS swaps the text to "Loading..." and disables it during a request. -->
+          <button
+            id="submit-btn"
+            type="submit"
+            class="flex-1 cursor-pointer rounded-md bg-primary px-4 py-3 text-base text-white disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Get Directions
+          </button>
+          <button
+            id="clear-btn"
+            type="button"
+            class="cursor-pointer rounded-md bg-gray-500 px-4 py-3 text-base text-white"
+          >
+            Clear
+          </button>
+        </div>
+      </form>
+
+      <!--
+        Error/warning message. role="alert" makes screen readers announce it.
+        Red by default; data-level="warning" (HTTP 400) switches it to yellow.
+      -->
+      <div
+        id="alert"
+        role="alert"
+        hidden
+        class="mt-4 rounded-md border border-[#f5c2c0] bg-[#fdecea] p-3.5 text-[#b71c1c] data-[level=warning]:border-[#ffe08a] data-[level=warning]:bg-[#fff8e1] data-[level=warning]:text-[#8a6100]"
+      ></div>
+
+      <!-- Results: hidden until a route comes back. -->
+      <section id="results" hidden class="mt-6">
+        <div class="mb-4 rounded-md border border-[#b7dfb9] bg-[#e8f5e9] px-3.5 py-2.5 text-[#1b5e20]">
+          Route found
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <!-- "origin → destination", filled in with textContent by js/ui.js. -->
+          <h2 id="route-heading" class="my-5 text-2xl font-bold"></h2>
+
+          <!--
+            Units switch (Test Case 2). aria-pressed tells screen readers which
+            option is on and also drives the blue "active" style.
+            Kilometers is the default, matching the lab's metric output.
+          -->
+          <div
+            id="unit-toggle"
+            role="group"
+            aria-label="Distance units"
+            class="flex overflow-hidden rounded-md border border-primary"
+          >
+            <button
+              type="button"
+              data-metric="false"
+              aria-pressed="false"
+              class="cursor-pointer bg-white px-3 py-1.5 text-sm text-primary aria-pressed:bg-primary aria-pressed:text-white"
+            >
+              Miles
+            </button>
+            <button
+              type="button"
+              data-metric="true"
+              aria-pressed="true"
+              class="cursor-pointer bg-white px-3 py-1.5 text-sm text-primary aria-pressed:bg-primary aria-pressed:text-white"
+            >
+              Kilometers
+            </button>
+          </div>
+        </div>
+
+        <!-- Trip summary cards (the lab's duration / distance / fuel lines). -->
+        <div class="my-4 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3">
+          <div class="rounded-[10px] bg-white p-3.5 text-center shadow-[0_1px_4px_rgba(0,0,0,0.1)]">
+            <span class="block text-xs text-gray-500">Trip Duration</span>
+            <span id="stat-duration" class="text-xl font-bold text-primary"></span>
+          </div>
+          <div class="rounded-[10px] bg-white p-3.5 text-center shadow-[0_1px_4px_rgba(0,0,0,0.1)]">
+            <span class="block text-xs text-gray-500">Distance</span>
+            <span id="stat-distance" class="text-xl font-bold text-primary"></span>
+          </div>
+          <div class="rounded-[10px] bg-white p-3.5 text-center shadow-[0_1px_4px_rgba(0,0,0,0.1)]">
+            <span class="block text-xs text-gray-500">Fuel Used</span>
+            <span id="stat-fuel" class="text-xl font-bold text-primary"></span>
+          </div>
+        </div>
+
+        <!--
+          Step-by-step directions (the lab's loop over legs[0].maneuvers).
+          js/ui.js adds plain <tr>/<td> elements with no classes. The cell
+          styles come from the arbitrary variants on <tbody> below, so all
+          the styling stays in this file:
+            *:even:bg-...          zebra stripes on every other row
+            [&_td]:...             padding and bottom border on every cell
+            [&_td:last-child]:...  distance column never wraps
+        -->
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse overflow-hidden rounded-[10px] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.1)]">
+            <thead>
+              <tr class="bg-primary text-left text-white">
+                <th class="border-b border-gray-200 p-3">#</th>
+                <th class="border-b border-gray-200 p-3">Directions</th>
+                <th class="border-b border-gray-200 p-3">Distance</th>
+              </tr>
+            </thead>
+            <tbody
+              id="directions-body"
+              class="*:even:bg-gray-50 [&_td]:border-b [&_td]:border-gray-200 [&_td]:p-3 [&_td]:text-left [&_td:last-child]:whitespace-nowrap"
+            ></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <!--
+      App logic. type="module" lets the files use import/export and also defers
+      running until the HTML above is parsed, so the elements exist when
+      main.js looks them up. The path is relative so it resolves to /js/main.js.
+    -->
+    <script type="module" src="js/main.js"></script>
   </body>
 </html>
