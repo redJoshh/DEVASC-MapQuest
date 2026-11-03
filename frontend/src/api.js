@@ -6,7 +6,7 @@ const SERVER_DOWN =
 
 function fail(text, level = "error") {
   const err = new Error(text);
-  err.level = level; // 'error' (red) or 'warning' (yellow)
+  err.level = level;
   return err;
 }
 
@@ -17,14 +17,14 @@ export async function fetchRoute(orig, dest) {
   try {
     res = await fetch(`/api/route?${params}`);
   } catch {
-    throw fail(SERVER_DOWN); // network failure
+    throw fail(SERVER_DOWN);
   }
 
+  // checks if data is JSON
   let data;
   try {
     data = await res.json();
   } catch {
-    // When Flask is stopped, Vite's proxy answers with an empty 500, not JSON
     throw fail(SERVER_DOWN);
   }
 

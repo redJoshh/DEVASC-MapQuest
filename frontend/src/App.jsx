@@ -11,16 +11,15 @@ export default function App() {
   const [route, setRoute] = useState(null);
   const [alert, setAlert] = useState(null); // { text, level: 'error' | 'warning' }
   const [loading, setLoading] = useState(false);
-  const [metric, setMetric] = useState(true); // the lab displayed metric by default
+  const [metric, setMetric] = useState(true); // true = km, false = miles
 
   async function handleSearch(orig, dest) {
     setAlert(null);
     setRoute(null);
     setLoading(true);
     try {
-      setRoute(await fetchRoute(orig, dest)); // Test Case 1
+      setRoute(await fetchRoute(orig, dest));
     } catch (err) {
-      // Test Case 4 (invalid location) and Test Case 5 (backend down)
       setAlert({ text: err.message, level: err.level || "error" });
     } finally {
       setLoading(false);
@@ -50,7 +49,7 @@ export default function App() {
 
       {route && (
         <section className="results">
-          <div className="success">Route found</div>
+          <div className="success">Route Found</div>
           <div className="results-header">
             <h2>
               {route.origin} &rarr; {route.destination}
