@@ -13,12 +13,12 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [metric, setMetric] = useState(true); // true = km, false = miles
 
-  async function handleSearch(orig, dest) {
+  async function handleSearch(orig, dest, routeType) {
     setAlert(null);
     setRoute(null);
     setLoading(true);
     try {
-      setRoute(await fetchRoute(orig, dest));
+      setRoute(await fetchRoute(orig, dest, routeType));
     } catch (err) {
       setAlert({ text: err.message, level: err.level || "error" });
     } finally {

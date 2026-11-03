@@ -10,8 +10,8 @@ function fail(text, level = "error") {
   return err;
 }
 
-export async function fetchRoute(orig, dest) {
-  const params = new URLSearchParams({ from: orig, to: dest });
+export async function fetchRoute(orig, dest, routeType) {
+  const params = new URLSearchParams({ from: orig, to: dest, routeType });
 
   let res;
   try {

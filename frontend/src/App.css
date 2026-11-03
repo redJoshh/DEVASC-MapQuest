@@ -118,6 +118,10 @@ button.swap {
   background: #1d4ed8;
   color: #fff;
 }
+/* Route type picker inside the form: four equal-width segments. */
+.toggle.route-type button {
+  flex: 1;
+}
 
 .summary {
   display: grid;

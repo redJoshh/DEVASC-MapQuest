@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { ROUTE_TYPES, DEFAULT_ROUTE_TYPE } from "../routeTypes";
 
 // Start/destination inputs with empty-field validation (Test Case 3),
-// plus swap and clear buttons.
+// a route type picker, plus swap and clear buttons.
 export default function RouteForm({ loading, onSearch, onClear }) {
   const [orig, setOrig] = useState("");
   const [dest, setDest] = useState("");
+  const [routeType, setRouteType] = useState(DEFAULT_ROUTE_TYPE);
   const [fieldError, setFieldError] = useState({ orig: false, dest: false });
 
   function handleSubmit(e) {
@@ -12,7 +14,7 @@ export default function RouteForm({ loading, onSearch, onClear }) {
     const errs = { orig: !orig.trim(), dest: !dest.trim() };
     setFieldError(errs);
     if (errs.orig || errs.dest) return; // nothing is sent to the backend
-    onSearch(orig.trim(), dest.trim());
+    onSearch(orig.trim(), dest.trim(), routeType);
   }
 
   function handleSwap() {
@@ -23,6 +25,7 @@ export default function RouteForm({ loading, onSearch, onClear }) {
   function handleClear() {
     setOrig("");
     setDest("");
+    setRouteType(DEFAULT_ROUTE_TYPE);
     setFieldError({ orig: false, dest: false });
     onClear();
   }
@@ -63,6 +66,20 @@ export default function RouteForm({ loading, onSearch, onClear }) {
       {(fieldError.orig || fieldError.dest) && (
         <p className="field-error">Please fill in both locations.</p>
       )}
+
+      <div className="toggle route-type" role="group" aria-label="Route type">
+        {ROUTE_TYPES.map((t) => (
+          <button
+            key={t.value}
+            type="button"
+            className={routeType === t.value ? "active" : ""}
+            aria-pressed={routeType === t.value}
+            onClick={() => setRouteType(t.value)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
       <div className="actions">
         <button type="submit" disabled={loading}>
