@@ -1,7 +1,7 @@
 """
 MapQuest Directions API wrapper (Flask).
 
-GET /api/route?from=<start>&to=<destination>
+GET /api/route?from=<start>&to=<destination>&routeType=<fastest|shortest|pedestrian|bicycle>
 
 Keeps the lab's logic (statuscode 0 / 402 / 611 checks, maneuvers list) but
 returns JSON for the React frontend instead of printing to the console.
@@ -23,6 +23,10 @@ KEY = os.getenv('MAPQUEST_KEY')
 # ourselves. 22 mpg is MapQuest's documented default highwayEfficiency.
 FUEL_MPG = 22.0
 
+# Route types MapQuest supports. Walking and cycling burn no fuel.
+ROUTE_TYPES = ('fastest', 'shortest', 'pedestrian', 'bicycle')
+NO_FUEL_TYPES = ('pedestrian', 'bicycle')
+
 # The lab handled 402 and 611 explicitly; everything else gets a generic message.
 ERROR_MESSAGES = {
     402: 'One or both locations could not be found. Try adding the city and state or country.',
@@ -42,10 +46,14 @@ def estimate_fuel(route):
 def get_route():
     orig = request.args.get('from', '').strip()
     dest = request.args.get('to', '').strip()
+    route_type = request.args.get('routeType', 'fastest').strip().lower() or 'fastest'
 
     # Missing input: stop before calling MapQuest at all (same idea as lab code 611)
     if not orig or not dest:
         return jsonify(error=ERROR_MESSAGES[611], statuscode=611), 400
+
+    if route_type not in ROUTE_TYPES:
+        return jsonify(error=f'Invalid route type. Choose one of: {", ".join(ROUTE_TYPES)}.'), 400
 
     if not KEY:
         return jsonify(error='Server is missing the MapQuest API key (check backend/.env).'), 500
@@ -53,7 +61,8 @@ def get_route():
     try:
         resp = requests.get(
             MAIN_API,
-            params={'key': KEY, 'from': orig, 'to': dest},  # requests URL-encodes this
+            # requests URL-encodes this
+            params={'key': KEY, 'from': orig, 'to': dest, 'routeType': route_type},
             timeout=10,
         )
     except requests.RequestException:
@@ -80,9 +89,10 @@ def get_route():
     return jsonify(
         origin=orig,
         destination=dest,
+        route_type=route_type,
         duration=route.get('formattedTime', 'N/A'),
         distance_miles=route.get('distance', 0),
-        fuel_gallons=estimate_fuel(route),
+        fuel_gallons=0 if route_type in NO_FUEL_TYPES else estimate_fuel(route),
         maneuvers=[
             {'narrative': m['narrative'], 'distance_miles': m['distance']}
             for m in route['legs'][0]['maneuvers']
