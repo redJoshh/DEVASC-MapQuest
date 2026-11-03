@@ -1,7 +1,7 @@
-import { formatDistance, formatFuel } from "../units";
-import { routeTypeLabel, usesFuel } from "../routeTypes";
+import { formatDistance } from "../units";
+import { routeTypeLabel } from "../routeTypes";
 
-// Route type, duration, distance and fuel cards (the lab's trip summary, formatted).
+// Route type, duration and distance cards (the lab's trip summary, formatted).
 export default function TripSummary({ route, metric }) {
   return (
     <div className="summary">
@@ -17,14 +17,6 @@ export default function TripSummary({ route, metric }) {
         <span className="label">Distance</span>
         <span className="value">
           {formatDistance(route.distance_miles, metric)}
-        </span>
-      </div>
-      <div className="stat">
-        <span className="label">Fuel Used</span>
-        <span className="value">
-          {usesFuel(route.route_type)
-            ? formatFuel(route.fuel_gallons, metric)
-            : "No fuel needed"}
         </span>
       </div>
     </div>

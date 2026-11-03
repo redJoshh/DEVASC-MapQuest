@@ -19,27 +19,14 @@ app = Flask(__name__)
 MAIN_API = 'https://www.mapquestapi.com/directions/v2/route'
 KEY = os.getenv('MAPQUEST_KEY')
 
-# MapQuest no longer includes 'fuelUsed' in route responses, so we estimate it
-# ourselves. 22 mpg is MapQuest's documented default highwayEfficiency.
-FUEL_MPG = 22.0
-
-# Route types MapQuest supports. Walking and cycling burn no fuel.
+# Route types MapQuest supports.
 ROUTE_TYPES = ('fastest', 'shortest', 'pedestrian', 'bicycle')
-NO_FUEL_TYPES = ('pedestrian', 'bicycle')
 
 # The lab handled 402 and 611 explicitly; everything else gets a generic message.
 ERROR_MESSAGES = {
     402: 'One or both locations could not be found. Try adding the city and state or country.',
     611: 'Please enter both a starting location and a destination.',
 }
-
-
-def estimate_fuel(route):
-    """Gallons used: MapQuest's value if it sent one, otherwise distance / FUEL_MPG."""
-    fuel = route.get('fuelUsed')
-    if not fuel or fuel <= 0:
-        fuel = route.get('distance', 0) / FUEL_MPG
-    return round(fuel, 2)
 
 
 @app.get('/api/route')
@@ -92,7 +79,6 @@ def get_route():
         route_type=route_type,
         duration=route.get('formattedTime', 'N/A'),
         distance_miles=route.get('distance', 0),
-        fuel_gallons=0 if route_type in NO_FUEL_TYPES else estimate_fuel(route),
         maneuvers=[
             {'narrative': m['narrative'], 'distance_miles': m['distance']}
             for m in route['legs'][0]['maneuvers']
